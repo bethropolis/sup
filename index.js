@@ -11,10 +11,11 @@ const bcrypt = require('bcrypt');
 const os = require('os');
 const packageJson = require('./package.json');
 const BASE_URL = 'https://bethro.alwaysdata.net/test/plugins';
+const AUTH_TOKEN = '';
 
 
-async function downloadPackage(packageName) {
-  const packageUrl = `${BASE_URL}/${packageName}.supl`;
+async function downloadPackage(packageName, secretKey="aWJvdGFscGx1czRzdHJpbmcK") {
+  const packageUrl = `${BASE_URL}/packages/${packageName}.supl`;
   const packagePath = path.join(__dirname, `${packageName}.supl`);
 
   let receivedBytes = 0;
@@ -50,8 +51,26 @@ async function downloadPackage(packageName) {
     request.on('error', reject);
   });
 
-  console.log(`\nDownloaded ${packageName} successfully!`);
+  if(status){
+      console.log(`\nDownloaded ${packageName} successfully!`);
+      // Read package data
+      const packageData = fs.readFileSync(packagePath);
+
+      // Read package signature
+      const signaturePath = path.join(__dirname, packageName, '.signature');
+      const signature = fs.readFileSync(signaturePath, 'utf-8');
+
+      // Confirm signature
+      if (confirmSignature(packageData, signature, secretKey)) {
+        console.log(`Signature on ${packageName} is valid!`);
+        return;
+      } else {
+        console.error(`Invalid signature on ${packageName}`);
+        return;
+      }
+  }
 }
+
 
 
 function extractPackage(packageName) {
@@ -111,7 +130,8 @@ function initPackage(packageName) {
 
   console.log(`Package ${packageName} created successfully!`);
 }
-function publishPackage(packageName, secretKey="aWJvdGFscGx1czRzdHJpbmcK") {
+
+async function publishPackage(packageName, secretKey="aWJvdGFscGx1czRzdHJpbmcK") {
   const packageDir = path.join(__dirname, packageName);
   if (!fs.existsSync(packageDir)) {
     console.error(`Package ${packageName} not found.`);
@@ -119,7 +139,7 @@ function publishPackage(packageName, secretKey="aWJvdGFscGx1czRzdHJpbmcK") {
   }
 
   // Validate package format
-  const requiredFiles = ['.signature', 'main.php', 'suplike.json'];
+  const requiredFiles = ['main.php', 'suplike.json'];
   const packageFiles = fs.readdirSync(packageDir);
   for (const file of requiredFiles) {
     if (!packageFiles.includes(file)) {
@@ -131,10 +151,12 @@ function publishPackage(packageName, secretKey="aWJvdGFscGx1czRzdHJpbmcK") {
   // Read package data
   const packageData = fs.readFileSync(path.join(packageDir, 'suplike.json'));
 
-  // Sign package
-  const signature = signPackage(packageData, secretKey);
+  // Sign package if .signature file is missing
   const signaturePath = path.join(packageDir, '.signature');
-  fs.writeFileSync(signaturePath, signature);
+  if (!fs.existsSync(signaturePath)) {
+    const signature = signPackage(packageData, secretKey);
+    fs.writeFileSync(signaturePath, signature);
+  }
 
   // Create package archive
   const archivePath = createPackageArchive(packageName);
@@ -149,26 +171,10 @@ function publishPackage(packageName, secretKey="aWJvdGFscGx1czRzdHJpbmcK") {
   .then((response) => {
     console.log(`Package ${packageName} published successfully!`);
     // Download package files
-    const downloadDir = path.join(__dirname, 'downloads', packageName);
-    fs.mkdirSync(downloadDir, { recursive: true });
-    const packageUrl = `${BASE_URL}/packages/${packageName}.supl`;
-    const packageFilePath = path.join(downloadDir, `${packageName}.supl`);
-    axios({
-      method: 'get',
-      url: packageUrl,
-      responseType: 'stream'
-    })
-    .then((response) => {
-      response.data.pipe(fs.createWriteStream(packageFilePath));
-      response.data.on('end', () => {
-        console.log(`Package ${packageName} downloaded successfully!`);
-      });
-    })
-    .catch((error) => {
-      console.error(`Failed to download package: ${error.message}`);
-    });
-  })
-  .catch((error) => {
+		 // Download package files
+		fs.unlinkSync(archivePath);
+    fs.unlinkSync(signaturePath);
+	}).catch((error) => {
     console.error(`Failed to publish package: ${error.message}`);
   });
 }
@@ -198,25 +204,6 @@ function signPackage(packageData, secretKey) {
   const hash = bcrypt.hashSync(packageData, salt);
   return hash;
 }
-function removePackage(packageName) {
-  const packageDir = path.join(__dirname, packageName);
-  const packageSupl = path.join(__dirname, `${packageName}.supl`);
-
-  if (fs.existsSync(packageDir)) {
-    console.log(`Removing ${packageName}...`);
-    fs.rmdirSync(packageDir, { recursive: true });
-    console.log(`${packageName} removed successfully!`);
-		console.log(`Removing ${packageName}.supl...`);
-    fs.unlinkSync(packageSupl);
-  } else if (fs.existsSync(packageSupl)) {
-    console.log(`Removing ${packageName}.supl file...`);
-    fs.unlinkSync(packageSupl);
-    console.log(`${packageName}.supl removed successfully!`);
-  } else {
-    console.error(`Package ${packageName} not found.`);
-  }
-}
-
 
 console.log(process.argv.length)
 if (process.argv.length < 3) {
