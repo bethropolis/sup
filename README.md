@@ -1,6 +1,6 @@
 # Sup - A Package Manager for Suplike
 
-Sup is a package manager for [Suplike, an open source social network. 
+Sup is a package manager for [Suplike](https://github.com/bethropolis/suplike-social-website), an open source social network. 
 Sup is designed to simplify plugin management. It has the following commands:
 
 - `install`: Installs a package.
