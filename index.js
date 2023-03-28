@@ -8,7 +8,6 @@ const packageJson = require('./package.json');
 const BASE_URL = 'https://bethro.alwaysdata.net/inc/extra';
 
 
-
 async function downloadPackage(packageName) {
   const packageUrl = `${BASE_URL}/${packageName}.supl`;
   const packagePath = path.join(__dirname, `${packageName}.supl`);
