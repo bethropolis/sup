@@ -6,7 +6,7 @@
       "sup": "./index.js"
    },
    "keywords": [],
-   "author": "",
+   "author": "bethropolis",
    "license": "ISC",
    "dependencies": {
       "@types/node": "^18.0.6",
