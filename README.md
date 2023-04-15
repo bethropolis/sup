@@ -13,7 +13,7 @@ Sup is designed to simplify plugin management. It has the following commands:
 To use Sup, you first need to install it. You can do this by running the following command:
 
 ```
- npm install -g sup
+ npm install -g sup-cli
 ```
 
 
